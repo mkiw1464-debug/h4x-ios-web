@@ -1,70 +1,44 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>H4X IOS - Admin Panel</title>
+    <title>H4X IOS ADMIN</title>
     <script src="https://cdn.tailwindcss.com"></script>
 </head>
-<body class="bg-gray-900 text-white font-sans">
-    <div class="container mx-auto p-6">
-        <header class="flex justify-between items-center mb-10 border-b border-gray-700 pb-5">
-            <h1 class="text-3xl font-bold text-blue-500">H4X IOS ADMIN</h1>
-            <div class="flex gap-4">
-                <!-- Button Maintenance Toggle[span_1](start_span)[span_1](end_span) -->
-                <button onclick="toggleMaintenance()" id="maintBtn" class="px-6 py-2 rounded-full font-bold transition-all {% if db.maintenance %}bg-red-600 text-white{% else %}bg-green-600 text-white{% endif %}">
-                    {% if db.maintenance %}OFF MAINTENANCE{% else %}ON MAINTENANCE{% endif %}
-                </button>
-            </div>
-        </header>
-
-        <!-- Stats Section -->
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-10">
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <p class="text-gray-400">Total Keys</p>
-                <h2 class="text-4xl font-black">{{ db.keys|length }}</h2>
-            </div>
-            <div class="bg-gray-800 p-6 rounded-xl border border-gray-700">
-                <p class="text-gray-400">System Status</p>
-                <h2 class="text-2xl font-bold">{% if db.maintenance %}🔧 MAINTENANCE{% else %}✅ ONLINE{% endif %}</h2>
-            </div>
+<body class="bg-gray-900 text-white p-8">
+    <div class="max-w-5xl mx-auto">
+        <div class="flex justify-between mb-8">
+            <h1 class="text-3xl font-bold text-blue-500 italic">H4X IOS CONTROL</h1>
+            <button onclick="toggleMaint()" class="px-6 py-2 rounded bg-{% if db.maintenance %}red{% else %}green{% endif %}-600">
+                {% if db.maintenance %}OFF MAINTENANCE{% else %}ON MAINTENANCE{% endif %}
+            </button>
         </div>
 
-        <!-- Key Management Table -->
-        <div class="bg-gray-800 rounded-xl overflow-hidden border border-gray-700">
-            <table class="w-full text-left">
-                <thead class="bg-gray-700 text-gray-300 uppercase text-sm">
-                    <tr>
-                        <th class="p-4">License Key</th>
-                        <th class="p-4">IP Address</th>
-                        <th class="p-4">Expiry</th>
-                        <th class="p-4">Actions</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    {% for key, data in db.keys.items() %}
-                    <tr class="border-b border-gray-700 hover:bg-gray-750 transition">
-                        <td class="p-4 font-mono text-blue-400">{{ key }}</td>
-                        <td class="p-4">{{ data.ip if data.ip else "Unregistered" }}</td>
-                        <td class="p-4 text-sm text-gray-400">{{ data.expiry }}</td>
-                        <td class="p-4 flex gap-2">
-                            <!-- Action buttons for management[span_2](start_span)[span_2](end_span) -->
-                            <button class="bg-yellow-600 hover:bg-yellow-700 px-3 py-1 rounded text-xs">RESET IP</button>
-                            <button class="bg-red-600 hover:bg-red-700 px-3 py-1 rounded text-xs">BAN</button>
-                        </td>
-                    </tr>
-                    {% endfor %}
-                </tbody>
-            </table>
+        <div class="bg-gray-800 p-6 rounded-xl mb-6">
+            <button onclick="genKey()" class="bg-blue-600 px-4 py-2 rounded font-bold">+ GEN NEW KEY</button>
         </div>
+
+        <table class="w-full bg-gray-800 rounded-xl overflow-hidden">
+            <thead class="bg-gray-700">
+                <tr>
+                    <th class="p-4 text-left">License Key</th>
+                    <th class="p-4 text-left">IP Address</th>
+                    <th class="p-4 text-left">Status</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for key, data in db.keys.items() %}
+                <tr class="border-b border-gray-700">
+                    <td class="p-4 font-mono text-blue-400">{{ key }}</td>
+                    <td class="p-4">{{ data.ip if data.ip else "Pending..." }}</td>
+                    <td class="p-4">Active</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
     </div>
-
     <script>
-        function toggleMaintenance() {
-            fetch('/api/admin/maintenance', { method: 'POST' })
-                .then(res => res.json())
-                .then(data => location.reload());
-        }
+        function toggleMaint() { fetch('/api/admin/maintenance', {method:'POST'}).then(()=>location.reload()); }
+        function genKey() { fetch('/api/admin/generate', {method:'POST'}).then(r=>r.json()).then(d=>alert("Key: "+d.key)); }
     </script>
 </body>
 </html>
