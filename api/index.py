@@ -1,56 +1,67 @@
 from flask import Flask, render_template, request, jsonify
 import json
 import os
+import time
+import uuid
+from functools import wraps
 
 app = Flask(__name__)
-
-# Nota: Untuk Vercel, lebih baik guna Database sebenar (seperti MongoDB atau Vercel KV) 
-# Tapi untuk permulaan, kita guna JSON file.
 DB_FILE = 'users_db.json'
 
 def load_db():
     if not os.path.exists(DB_FILE):
         return {"maintenance": False, "keys": {}}
-    with open(DB_FILE, 'r') as f:
-        return json.load(f)
+    with open(DB_FILE, 'r') as f: return json.load(f)
 
 def save_db(data):
-    with open(DB_FILE, 'w') as f:
-        json.dump(data, f, indent=4)
+    with open(DB_FILE, 'w') as f: json.dump(data, f, indent=4)
+
+# Security untuk Admin Dashboard[span_2](start_span)[span_2](end_span)
+def admin_required(f):
+    @wraps(f)
+    def decorated(*args, **kwargs):
+        auth = request.authorization
+        if not auth or (auth.username != 'admin' or auth.password != 'AKMAL_H4X'):
+            return "Unauthorized", 401
+        return f(*args, **kwargs)
+    return decorated
 
 @app.route('/')
 def home():
     return render_template('index.html')
 
-# Endpoint untuk Admin Dashboard
 @app.route('/admin')
+@admin_required
 def admin():
-    db = load_db()
-    return render_template('admin.html', db=db)
+    return render_template('admin.html', db=load_db())
 
-# API untuk skrip drag.py panggil (Verify)
 @app.route('/api/verify', methods=['GET'])
 def verify():
     db = load_db()
-    client_ip = request.remote_addr
+    client_ip = request.args.get('ip')
     
     if db.get("maintenance"):
-        return jsonify({"status": "maintenance", "msg": "MAINTENANCE, WAIT FOR UPDATE"}), 403[span_1](start_span)[span_1](end_span)
+        return jsonify({"status": "maintenance"}), 403[span_3](start_span)[span_3](end_span)
     
-    # Logik semakan IP
     for key, data in db['keys'].items():
         if data['ip'] == client_ip:
-            return jsonify({"status": "success", "key": key})
-            
-    return jsonify({"status": "denied"}), 403[span_2](start_span)[span_2](end_span)
+            if time.time() < data['expiry']:
+                return jsonify({"status": "success"})
+    return jsonify({"status": "denied"}), 403[span_4](start_span)[span_4](end_span)
 
-# API untuk Admin Toggle Maintenance
 @app.route('/api/admin/maintenance', methods=['POST'])
-def toggle_maintenance():
+@admin_required
+def toggle_maint():
     db = load_db()
     db['maintenance'] = not db['maintenance']
     save_db(db)
-    return jsonify({"new_status": db['maintenance']})
+    return jsonify({"status": db['maintenance']})
 
-if __name__ == '__main__':
-    app.run()
+@app.route('/api/admin/generate', methods=['POST'])
+@admin_required
+def generate():
+    db = load_db()
+    new_key = f"H4X-{str(uuid.uuid4())[:8].upper()}"
+    db['keys'][new_key] = {"ip": None, "expiry": int(time.time()) + 2592000} # 30 Hari[span_5](start_span)[span_5](end_span)
+    save_db(db)
+    return jsonify({"key": new_key})
